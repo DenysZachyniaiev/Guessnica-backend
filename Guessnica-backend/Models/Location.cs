@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Guessnica_backend.Models;
 
@@ -6,11 +7,14 @@ public class Location
 {
     public int Id { get; set; }
     [Required]
+    [Column(TypeName = "decimal(10,7)")]
     [Range(-90, 90)]
-    public required double Latitude { get; set; }
+    public decimal Latitude { get; set; }
+
     [Required]
+    [Column(TypeName = "decimal(10,7)")]
     [Range(-180, 180)]
-    public required double Longitude { get; set; }
+    public decimal Longitude { get; set; }
     public string ImageUrl { get; set; }
     [MaxLength(200)]
     public string? ShortDescription { get; set; }

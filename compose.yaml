@@ -9,6 +9,8 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:8080
       - ASPNETCORE_ENVIRONMENT=Development
+    volumes:
+      - images:/app/wwwroot/images/locations
   db:
     image: postgres:16
     container_name: guessnica-db
@@ -23,3 +25,4 @@ services:
 
 volumes:
   pgdata:
+  images:

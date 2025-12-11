@@ -1,9 +1,12 @@
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER $APP_UID
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 EXPOSE 8081
+RUN mkdir -p /app/wwwroot/images/locations \
+    && chown -R 1000:1000 /app/wwwroot/images
+
+USER 1000
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release

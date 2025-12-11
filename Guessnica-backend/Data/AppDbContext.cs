@@ -12,6 +12,8 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole, string>
     public DbSet<UserVerificationCode> UserVerificationCodes => Set<UserVerificationCode>();
     
     public DbSet<Location> Locations { get; set; }
+    
+    public DbSet<Riddle> Riddles { get; set; }
 
     protected override void OnModelCreating(ModelBuilder b)
     {

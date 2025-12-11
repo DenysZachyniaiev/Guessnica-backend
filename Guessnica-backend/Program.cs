@@ -209,6 +209,8 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 
 builder.Services.AddScoped<ILocationService, LocationService>();
 
+builder.Services.AddScoped<IRiddleService, RiddleService>();
+
 var app = builder.Build();
 
 app.UseExceptionHandler("/error");

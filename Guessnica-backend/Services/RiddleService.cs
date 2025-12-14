@@ -29,15 +29,13 @@ public class RiddleService : IRiddleService
 
     public async Task<Riddle?> CreateAsync(Riddle riddle)
     {
-        // Walidacja: czy taka lokalizacja w ogóle istnieje?
         var locExists = await _db.Locations.AnyAsync(l => l.Id == riddle.LocationId);
         if (!locExists)
-            return null; // kontroler zamieni to na 400 BadRequest
+            return null;
 
         _db.Riddles.Add(riddle);
         await _db.SaveChangesAsync();
 
-        // Dociągamy z bazy z nawigacją Location, żeby w kontrolerze nie było NullReference
         return await _db.Riddles
             .Include(r => r.Location)
             .FirstAsync(r => r.Id == riddle.Id);
@@ -55,9 +53,15 @@ public class RiddleService : IRiddleService
         existing.Description = updated.Description;
         existing.Difficulty = updated.Difficulty;
         existing.LocationId = updated.LocationId;
+        
+        existing.TimeLimitSeconds = updated.TimeLimitSeconds;
+        existing.MaxDistanceMeters = updated.MaxDistanceMeters;
 
         await _db.SaveChangesAsync();
-        return existing;
+        
+        return await _db.Riddles
+            .Include(r => r.Location)
+            .FirstAsync(r => r.Id == existing.Id);
     }
 
     public async Task<bool> DeleteAsync(int id)

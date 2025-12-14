@@ -13,4 +13,10 @@ public class RiddleUpdateDto
 
     [Required]
     public int LocationId { get; set; }
+    
+    [Range(1, 86400, ErrorMessage = "TimeLimitSeconds must be between 1 and 86400.")]
+    public int TimeLimitSeconds { get; set; }
+    
+    [Range(1, 50000, ErrorMessage = "MaxDistanceMeters must be between 1 and 50000.")]
+    public int MaxDistanceMeters { get; set; }
 }

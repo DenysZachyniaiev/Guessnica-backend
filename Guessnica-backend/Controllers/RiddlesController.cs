@@ -17,8 +17,7 @@ public class RiddlesController : ControllerBase
     {
         _service = service;
     }
-
-    // GET ALL
+    
     [HttpGet]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAll()
@@ -33,13 +32,14 @@ public class RiddlesController : ControllerBase
             LocationId = r.LocationId,
             Latitude = r.Location.Latitude,
             Longitude = r.Location.Longitude,
-            ImageUrl = r.Location.ImageUrl
+            ImageUrl = r.Location.ImageUrl,
+            TimeLimitSeconds = r.TimeLimitSeconds,
+            MaxDistanceMeters = r.MaxDistanceMeters
         });
 
         return Ok(result);
     }
-
-    // GET BY ID
+    
     [HttpGet("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Get(int id)
@@ -55,11 +55,12 @@ public class RiddlesController : ControllerBase
             LocationId = r.LocationId,
             Latitude = r.Location.Latitude,
             Longitude = r.Location.Longitude,
-            ImageUrl = r.Location.ImageUrl
+            ImageUrl = r.Location.ImageUrl,
+            TimeLimitSeconds = r.TimeLimitSeconds,
+            MaxDistanceMeters = r.MaxDistanceMeters
         });
     }
-
-    // CREATE
+    
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([FromBody] RiddleCreateDto dto)
@@ -71,14 +72,15 @@ public class RiddlesController : ControllerBase
         {
             Description = dto.Description,
             Difficulty = (RiddleDifficulty)dto.Difficulty,
-            LocationId = dto.LocationId
+            LocationId = dto.LocationId,
+            TimeLimitSeconds = dto.TimeLimitSeconds,
+            MaxDistanceMeters = dto.MaxDistanceMeters
         };
 
         var created = await _service.CreateAsync(riddle);
 
         if (created == null)
         {
-            // Ładny problem+json zamiast gołego stringa
             return Problem(
                 statusCode: 400,
                 title: "Invalid location",
@@ -94,11 +96,12 @@ public class RiddlesController : ControllerBase
             LocationId = created.LocationId,
             Latitude = created.Location.Latitude,
             Longitude = created.Location.Longitude,
-            ImageUrl = created.Location.ImageUrl
+            ImageUrl = created.Location.ImageUrl,
+            TimeLimitSeconds = created.TimeLimitSeconds,
+            MaxDistanceMeters = created.MaxDistanceMeters
         });
     }
-
-    // UPDATE
+    
     [HttpPut("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(int id, [FromBody] RiddleUpdateDto dto)
@@ -110,7 +113,9 @@ public class RiddlesController : ControllerBase
         {
             Description = dto.Description,
             Difficulty = (RiddleDifficulty)dto.Difficulty,
-            LocationId = dto.LocationId
+            LocationId = dto.LocationId,
+            TimeLimitSeconds = dto.TimeLimitSeconds,
+            MaxDistanceMeters = dto.MaxDistanceMeters
         };
 
         Riddle? updated;
@@ -121,7 +126,6 @@ public class RiddlesController : ControllerBase
         }
         catch (InvalidOperationException)
         {
-            // LocationId nie istnieje – też problem+json
             return Problem(
                 statusCode: 400,
                 title: "Invalid location",
@@ -131,22 +135,24 @@ public class RiddlesController : ControllerBase
 
         if (updated == null)
             return NotFound();
-
+        
         var withLocation = await _service.GetByIdAsync(updated.Id);
+        if (withLocation == null) return NotFound();
 
         return Ok(new RiddleResponseDto
         {
-            Id = withLocation!.Id,
+            Id = withLocation.Id,
             Description = withLocation.Description,
             Difficulty = (int)withLocation.Difficulty,
             LocationId = withLocation.LocationId,
             Latitude = withLocation.Location.Latitude,
             Longitude = withLocation.Location.Longitude,
-            ImageUrl = withLocation.Location.ImageUrl
+            ImageUrl = withLocation.Location.ImageUrl,
+            TimeLimitSeconds = withLocation.TimeLimitSeconds,
+            MaxDistanceMeters = withLocation.MaxDistanceMeters
         });
     }
-
-    // DELETE
+    
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id)

@@ -11,4 +11,7 @@ public class RiddleResponseDto
     public decimal Latitude { get; set; }
     public decimal Longitude { get; set; }
     public required string ImageUrl { get; set; }
+
+    public int TimeLimitSeconds { get; set; }
+    public int MaxDistanceMeters { get; set; }
 }

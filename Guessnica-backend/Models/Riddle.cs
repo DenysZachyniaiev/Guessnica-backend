@@ -14,6 +14,9 @@ public class Riddle
     public required string Description { get; set; }
 
     public RiddleDifficulty Difficulty { get; set; }
+    
+    public int TimeLimitSeconds { get; set; }
+    public int MaxDistanceMeters { get; set; }
 
     public int LocationId { get; set; }
     public Location Location { get; set; } = null!;

@@ -1,0 +1,13 @@
+﻿FROM mcr.microsoft.com/dotnet/sdk:8.0
+
+WORKDIR /app
+
+COPY . .
+
+RUN dotnet tool install --global dotnet-ef --version 8.0
+ENV PATH="$PATH:/root/.dotnet/tools"
+
+EXPOSE 8080
+EXPOSE 8081
+
+CMD ["dotnet", "watch", "run", "--urls", "http://+:8080"]

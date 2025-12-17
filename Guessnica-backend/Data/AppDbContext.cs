@@ -1,18 +1,28 @@
-namespace Guessnica_backend.Data;
+using Guessnica_backend.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-public class AppDbContext : DbContext
-{
-    public AppDbContext(DbContextOptions<AppDbContext> options) 
-        : base(options)
-    {
-    }
-    
-    public DbSet<User> Users { get; set; }
-}
+namespace Guessnica_backend.Data;
 
-public class User
+public class AppDbContext : IdentityDbContext<AppUser, IdentityRole, string>
 {
-    public int Id { get; set; }
-    public string Name { get; set; }
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+    public DbSet<UserVerificationCode> UserVerificationCodes => Set<UserVerificationCode>();
+    
+    public DbSet<Location> Locations { get; set; }
+    
+    public DbSet<Riddle> Riddles { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder b)
+    {
+        base.OnModelCreating(b);
+        
+        b.Entity<UserVerificationCode>()
+            .HasIndex(x => new { x.UserId, x.Purpose, x.ExpiresAtUtc });
+        
+        b.Entity<UserVerificationCode>()
+            .HasIndex(x => x.ResetSessionId);
+    }
 }

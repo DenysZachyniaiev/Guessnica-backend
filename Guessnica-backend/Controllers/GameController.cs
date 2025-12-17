@@ -42,4 +42,30 @@ public class GameController : ControllerBase
             MaxDistanceMeters = ur.Riddle.MaxDistanceMeters
         });
     }
+    [HttpPost("answer")]
+    [Authorize(Roles = "User,Admin")]
+    public async Task<IActionResult> SubmitAnswer([FromBody] SubmitAnswerDto dto)
+    {
+        var userId = User?.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                     ?? User?.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+
+        if (userId == null)
+            return Unauthorized();
+
+        try
+        {
+            var result = await _game.SubmitDailyAnswerAsync(userId, dto.Latitude, dto.Longitude);
+            return Ok(new
+            {
+                result.Points,
+                result.DistanceMeters,
+                result.TimeSeconds,
+                result.IsCorrect
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

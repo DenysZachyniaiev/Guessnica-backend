@@ -36,7 +36,7 @@ public class GameController : ControllerBase
             UserRiddleId = ur.Id,
             RiddleId = ur.RiddleId,
             ImageUrl = ur.Riddle.Location.ImageUrl,
-            ShortDescription = ur.Riddle.Location.ShortDescription,
+            Description = ur.Riddle.Description,
             Difficulty = (int)ur.Riddle.Difficulty,
             TimeLimitSeconds = ur.Riddle.TimeLimitSeconds,
             MaxDistanceMeters = ur.Riddle.MaxDistanceMeters

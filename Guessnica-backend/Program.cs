@@ -213,6 +213,8 @@ builder.Services.AddScoped<IRiddleService, RiddleService>();
 
 builder.Services.AddScoped<IGameService, GameService>();
 
+builder.Services.AddScoped<IAdminService, AdminService>();
+
 var app = builder.Build();
 
 app.UseExceptionHandler("/error");

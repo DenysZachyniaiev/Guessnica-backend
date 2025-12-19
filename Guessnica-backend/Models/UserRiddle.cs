@@ -17,5 +17,7 @@ public class UserRiddle
     
     public double? DistanceMeters { get; set; }
     public int? TimeSeconds { get; set; }
+    public decimal SubmittedLatitude { get; set; }
+    public decimal SubmittedLongitude { get; set; }
     public int? Points { get; set; }
 }

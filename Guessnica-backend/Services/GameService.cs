@@ -94,7 +94,7 @@ public class GameService : IGameService
         
         int timeElapsedSeconds = (int)(DateTime.UtcNow - userRiddle.AssignedAt).TotalSeconds;
         
-        bool isCorrect = distanceMeters <= userRiddle.Riddle.MaxDistanceMeters;
+        bool isCorrect = distanceMeters <= userRiddle.Riddle.MaxDistanceMeters && timeElapsedSeconds<userRiddle.Riddle.TimeLimitSeconds;
         
         int score = ScoreCalculation.CalculateScore(
             basePoints: (int)userRiddle.Riddle.Difficulty,
@@ -103,6 +103,8 @@ public class GameService : IGameService
             maxDistance: userRiddle.Riddle.MaxDistanceMeters
         );
         
+        userRiddle.SubmittedLatitude = latitude;
+        userRiddle.SubmittedLongitude = longitude;
         userRiddle.DistanceMeters = distanceMeters;
         userRiddle.TimeSeconds = timeElapsedSeconds;
         userRiddle.Points = score;

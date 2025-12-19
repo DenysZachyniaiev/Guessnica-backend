@@ -175,6 +175,12 @@ namespace Guessnica_backend.Migrations
                     b.Property<int>("RiddleId")
                         .HasColumnType("integer");
 
+                    b.Property<decimal>("SubmittedLatitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("SubmittedLongitude")
+                        .HasColumnType("numeric");
+
                     b.Property<int?>("TimeSeconds")
                         .HasColumnType("integer");
 

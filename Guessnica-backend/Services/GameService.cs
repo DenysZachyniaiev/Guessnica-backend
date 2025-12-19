@@ -103,8 +103,6 @@ public class GameService : IGameService
             maxDistance: userRiddle.Riddle.MaxDistanceMeters
         );
         
-        userRiddle.Riddle.Location.Latitude = latitude;
-        userRiddle.Riddle.Location.Longitude = longitude;
         userRiddle.DistanceMeters = distanceMeters;
         userRiddle.TimeSeconds = timeElapsedSeconds;
         userRiddle.Points = score;

@@ -217,7 +217,7 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 
-builder.Services.AddScoped<IUserStatsService, UserStatsService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 var app = builder.Build();
 

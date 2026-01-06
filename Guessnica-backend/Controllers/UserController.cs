@@ -14,13 +14,13 @@ using Microsoft.AspNetCore.Mvc;
 [Authorize]
 public class UserController: ControllerBase
 {
-    private readonly IUserStatsService _stats;
+    private readonly IUserService _service;
     private readonly UserManager<AppUser> _userManager;
     
-    public UserController(UserManager<AppUser> userManager,IUserStatsService stats)
+    public UserController(UserManager<AppUser> userManager,IUserService service)
     {
         _userManager = userManager;
-        _stats = stats;
+        _service = service;
     }
     
     
@@ -40,14 +40,38 @@ public class UserController: ControllerBase
             Id = user.Id,
             DisplayName = user.DisplayName,
             Email = user.Email,
-            Roles = roles.ToArray()
+            Roles = roles.ToArray(),
+            AvatarUrl = user.AvatarUrl
         });
     }
     
     [HttpGet("me/stats")]
-        public async Task<IActionResult> Stats()
+    public async Task<IActionResult> Stats()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!; 
+        return Ok(await _service.GetMyStatsAsync(userId));
+    }
+        
+    [HttpPost("me/avatar")]
+    public async Task<IActionResult> UploadAvatar(IFormFile avatar)
+    {
+        if (avatar == null || avatar.Length == 0)
+            return BadRequest("No file uploaded");
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var user = await _userManager.FindByIdAsync(userId);
+
+        try
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            return Ok(await _stats.GetMyStatsAsync(userId));
+            var avatarUrl = await _service.SaveAvatarAsync(user.Id, avatar);
+            user.AvatarUrl = avatarUrl;
+            await _userManager.UpdateAsync(user);
+
+            return Ok(new { avatarUrl });
         }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

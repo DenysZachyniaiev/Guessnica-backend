@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Guessnica-backend/Dockerfile
     ports:
-      - "8080:8080"
+      - "8082:8081"
     environment:
       - ASPNETCORE_URLS=http://+:8080
       - ASPNETCORE_ENVIRONMENT=Development

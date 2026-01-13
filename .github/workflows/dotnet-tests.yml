@@ -25,31 +25,21 @@ jobs:
       - name: Run Tests with Coverage
         run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
 
-      - name: List coverage files (Debug)
+      - name: Debug - List all files
         run: |
-          echo "=== Coverage directory structure ==="
-          find ./coverage -type f -name "*.xml" || echo "No XML files found"
-          echo "=== All files in coverage ==="
-          ls -R ./coverage || echo "Coverage directory is empty"
+          echo "Listing coverage directory:"
+          ls -la ./coverage || echo "Directory not found"
+          find ./coverage -type f || echo "No files found"
 
       - name: Generate Coverage Report
         continue-on-error: true
         run: |
           dotnet tool install -g dotnet-reportgenerator-globaltool
-          COVERAGE_FILE=$(find ./coverage -name "coverage.cobertura.xml" | head -n 1)
-          if [ -n "$COVERAGE_FILE" ]; then
-            echo "Found coverage file: $COVERAGE_FILE"
-            reportgenerator -reports:./coverage/**/coverage.cobertura.xml -targetdir:./coverage/report -reporttypes:'Html;TextSummary'
-            if [ -f ./coverage/report/Summary.txt ]; then 
-              cat ./coverage/report/Summary.txt
-            fi
-          else
-            echo "No coverage.cobertura.xml files found"
-          fi
+          reportgenerator "-reports:./coverage/**/coverage.cobertura.xml" "-targetdir:./coverage/report" "-reporttypes:Html"
 
-      - name: Upload Coverage Report
+      - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report
-          path: ./coverage
+          name: test-coverage
+          path: ./coverage/**/*

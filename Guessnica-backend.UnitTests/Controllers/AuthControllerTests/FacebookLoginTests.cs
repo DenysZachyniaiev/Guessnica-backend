@@ -7,7 +7,6 @@ using Microsoft.Extensions.Options;
 using Guessnica_backend.Models;
 using Guessnica_backend.Services;
 using Guessnica_backend.Dtos;
-using System.Collections.Generic;
 
 namespace Guessnica_backend.Tests.Controllers.AuthControllerTests;
 
@@ -194,7 +193,7 @@ public class FacebookLoginTests
                 It.IsAny<UserManager<AppUser>>(),
                 It.IsAny<IJwtService>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((TokenResponseDto?)null);
+            .Returns(Task.FromResult<TokenResponseDto>(null!)); // Użyj null-forgiving operator
 
         var result = await _controller.FacebookLogin(dto, _facebookAuthServiceMock.Object);
 
@@ -202,8 +201,11 @@ public class FacebookLoginTests
         Assert.Equal(401, unauthorizedResult.StatusCode);
 
         var value = unauthorizedResult.Value;
-        var messageProperty = value?.GetType().GetProperty("message");
+        Assert.NotNull(value);
+
+        var messageProperty = value.GetType().GetProperty("message");
         Assert.NotNull(messageProperty);
+
         var message = messageProperty.GetValue(value)?.ToString();
         Assert.Equal("Facebook authentication failed.", message);
     }

@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication;
-using Guessnica_backend.Controllers;
 using Guessnica_backend.Models;
 using Guessnica_backend.Services;
 
@@ -65,6 +64,8 @@ public class LogoutTests
         Assert.Equal(200, okResult.StatusCode);
 
         var value = okResult.Value;
+        Assert.NotNull(value);
+    
         var messageProperty = value.GetType().GetProperty("message");
         Assert.NotNull(messageProperty);
 

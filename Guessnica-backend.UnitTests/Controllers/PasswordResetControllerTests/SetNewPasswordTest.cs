@@ -8,13 +8,8 @@ using Microsoft.Extensions.Logging;
 using Guessnica_backend.Controllers;
 using Guessnica_backend.Models;
 using Guessnica_backend.Services;
-using Guessnica_backend.Services.Helpers;
 using Guessnica_backend.Dtos;
 using Guessnica_backend.Data;
-using System;
-using System.Threading.Tasks;
-using System.Linq;
-using System.Collections.Generic;
 
 namespace Guessnica_backend.Tests.Controllers;
 
@@ -62,61 +57,61 @@ public class SetNewPasswordTests
     }
 
     [Fact]
-    public async Task SetNewPassword_WithValidSession_ResetsPasswordSuccessfully()
+public async Task SetNewPassword_WithValidSession_ResetsPasswordSuccessfully()
+{
+    var user = new AppUser
     {
-        var user = new AppUser
-        {
-            Id = "user-id",
-            Email = "user@example.com",
-            UserName = "user@example.com"
-        };
+        Id = "user-id",
+        Email = "user@example.com",
+        UserName = "user@example.com"
+    };
 
-        var resetSessionId = Guid.NewGuid();
-        var resetToken = "valid-reset-token";
-        var codeRecord = new UserVerificationCode
-        {
-            Id = Guid.NewGuid(),
-            UserId = user.Id,
-            Purpose = "password_reset",
-            CodeHash = "hash",
-            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10),
-            CreatedAtUtc = DateTime.UtcNow.AddMinutes(-5),
-            UsedAtUtc = DateTime.UtcNow.AddMinutes(-3),
-            ResetSessionId = resetSessionId,
-            ResetSessionExpiresAtUtc = DateTime.UtcNow.AddMinutes(10),
-            IdentityResetToken = resetToken
-        };
-        _context.UserVerificationCodes.Add(codeRecord);
-        await _context.SaveChangesAsync();
+    var resetSessionId = Guid.NewGuid();
+    var resetToken = "valid-reset-token";
+    var codeRecord = new UserVerificationCode
+    {
+        Id = Guid.NewGuid(),
+        UserId = user.Id,
+        Purpose = "password_reset",
+        CodeHash = "hash",
+        ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10),
+        CreatedAtUtc = DateTime.UtcNow.AddMinutes(-5),
+        UsedAtUtc = DateTime.UtcNow.AddMinutes(-3),
+        ResetSessionId = resetSessionId,
+        ResetSessionExpiresAtUtc = DateTime.UtcNow.AddMinutes(10),
+        IdentityResetToken = resetToken
+    };
+    _context.UserVerificationCodes.Add(codeRecord);
+    await _context.SaveChangesAsync();
 
-        var dto = new SetNewPasswordDto(
-            Email: "user@example.com",
-            ResetSessionId: resetSessionId,
-            NewPassword: "NewPassword123!"
-        );
+    var dto = new SetNewPasswordDto(
+        Email: "user@example.com",
+        ResetSessionId: resetSessionId,
+        NewPassword: "NewPassword123!"
+    );
 
-        _userManagerMock.Setup(x => x.FindByEmailAsync("user@example.com"))
-            .ReturnsAsync(user);
-        _userManagerMock.Setup(x => x.ResetPasswordAsync(user, resetToken, dto.NewPassword))
-            .ReturnsAsync(IdentityResult.Success);
-        _userManagerMock.Setup(x => x.UpdateSecurityStampAsync(user))
-            .ReturnsAsync(IdentityResult.Success);
+    _userManagerMock.Setup(x => x.FindByEmailAsync("user@example.com"))
+        .ReturnsAsync(user);
+    _userManagerMock.Setup(x => x.ResetPasswordAsync(user, resetToken, dto.NewPassword))
+        .ReturnsAsync(IdentityResult.Success);
+    _userManagerMock.Setup(x => x.UpdateSecurityStampAsync(user))
+        .ReturnsAsync(IdentityResult.Success);
 
+    var result = await _controller.SetNewPassword(dto);
 
-        var result = await _controller.SetNewPassword(dto);
+    var okResult = Assert.IsType<OkObjectResult>(result);
+    var value = okResult.Value;
+    Assert.NotNull(value);
+    
+    var messageProp = value.GetType().GetProperty("message");
+    Assert.NotNull(messageProp);
+    
+    var message = messageProp.GetValue(value) as string;
+    Assert.Equal("Password reset successfully.", message);
 
-
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var value = okResult.Value;
-        var messageProp = value.GetType().GetProperty("message");
-        Assert.NotNull(value);
-        var message = messageProp.GetValue(value) as string;
-        Assert.NotNull(messageProp); 
-        Assert.Equal("Password reset successfully.", message);
-
-        _userManagerMock.Verify(x => x.ResetPasswordAsync(user, resetToken, dto.NewPassword), Times.Once);
-        _userManagerMock.Verify(x => x.UpdateSecurityStampAsync(user), Times.Once);
-    }
+    _userManagerMock.Verify(x => x.ResetPasswordAsync(user, resetToken, dto.NewPassword), Times.Once);
+    _userManagerMock.Verify(x => x.UpdateSecurityStampAsync(user), Times.Once);
+}
 
     [Fact]
     public async Task SetNewPassword_WithNonExistentUser_ReturnsUnauthorized()

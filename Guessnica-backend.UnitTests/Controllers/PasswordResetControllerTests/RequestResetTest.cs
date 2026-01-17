@@ -85,11 +85,10 @@ public class RequestResetTests
     [Fact]
     public async Task RequestReset_WithNonExistentEmail_ReturnsOkWithoutSendingEmail()
     {
-       
         var dto = new RequestPasswordResetDto { Email = "nonexistent@example.com" };
 
         _userManagerMock.Setup(x => x.FindByEmailAsync("nonexistent@example.com"))
-            .ReturnsAsync((AppUser)null);
+            .ReturnsAsync(null as AppUser);
 
 
         var result = await _controller.RequestReset(dto);

@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication;
-using Guessnica_backend.Controllers;
 using Guessnica_backend.Models;
 using Guessnica_backend.Services;
 using Guessnica_backend.Dtos;
@@ -174,7 +173,7 @@ public class MeTests
         };
 
         _userManagerMock.Setup(x => x.FindByIdAsync(userId))
-            .ReturnsAsync((AppUser)null);
+            .ReturnsAsync(null as AppUser);
 
         var result = await _controller.Me();
 

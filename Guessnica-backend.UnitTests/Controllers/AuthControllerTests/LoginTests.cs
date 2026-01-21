@@ -3,7 +3,6 @@ using Moq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
-using Guessnica_backend.Controllers;
 using Guessnica_backend.Models;
 using Guessnica_backend.Services;
 using Guessnica_backend.Dtos;
@@ -56,7 +55,7 @@ public class LoginTests
             _jwtServiceMock.Object,
             _loggerMock.Object);
     }
-
+    
     [Fact]
     public async Task Login_WithValidCredentials_ReturnsOkWithToken()
     {

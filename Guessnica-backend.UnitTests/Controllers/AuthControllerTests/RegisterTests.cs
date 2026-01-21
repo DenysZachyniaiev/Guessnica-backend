@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication;
-using Guessnica_backend.Controllers;
 using Guessnica_backend.Models;
 using Guessnica_backend.Services;
 using Guessnica_backend.Dtos;

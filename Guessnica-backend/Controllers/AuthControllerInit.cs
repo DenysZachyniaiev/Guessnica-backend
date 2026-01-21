@@ -99,6 +99,11 @@ public class AuthController : ControllerBase
                 _logger.LogWarning("Facebook authentication failed - null token returned");
                 return Unauthorized(new { message = "Facebook authentication failed." });
             }
+            if (token.ExpiresAt < DateTime.UtcNow)
+            {
+                _logger.LogWarning("Facebook login failed: JWT token is expired.");
+                return Unauthorized(new { message = "Token is expired." });
+            }
 
             _logger.LogInformation("Facebook login successful");
             return Ok(token);

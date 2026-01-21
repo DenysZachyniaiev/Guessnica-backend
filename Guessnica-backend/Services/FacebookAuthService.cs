@@ -1,4 +1,5 @@
-﻿using Guessnica_backend.Dtos;
+﻿using System.Net;
+using Guessnica_backend.Dtos;
 
 namespace Guessnica_backend.Services;
 
@@ -56,18 +57,42 @@ public sealed class FacebookAuthService : IFacebookAuthService
         var appAccessToken = $"{_appId}|{_appSecret}";
         var url = $"https://graph.facebook.com/debug_token?input_token={Uri.EscapeDataString(accessToken)}&access_token={Uri.EscapeDataString(appAccessToken)}";
 
-        var resp = await _http.GetFromJsonAsync<FacebookTokenDebugResponse>(url, cancellationToken: ct);
-        if (resp?.Data is null) return (false, null);
+        try
+        {
+            var resp = await _http.GetFromJsonAsync<FacebookTokenDebugResponse>(url, cancellationToken: ct);
+            if (resp?.Data is null) return (false, null);
 
-        var ok = resp.Data.IsValid && resp.Data.AppId == _appId;
-        return (ok, resp.Data.UserId);
+            var ok = resp.Data.IsValid && resp.Data.AppId == _appId;
+            return (ok, resp.Data.UserId);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.BadRequest)
+        {
+            throw new UnauthorizedAccessException("Invalid Facebook Access Token", ex);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("An error occurred while validating the access token", ex);
+        }
     }
 
     public async Task<FacebookUserInfo?> GetUserInfoAsync(string accessToken, CancellationToken ct = default)
     {
         var fields = "id,name,email";
         var url = $"https://graph.facebook.com/me?fields={fields}&access_token={Uri.EscapeDataString(accessToken)}";
-        return await _http.GetFromJsonAsync<FacebookUserInfo>(url, cancellationToken: ct);
+
+        try
+        {
+            var userInfo = await _http.GetFromJsonAsync<FacebookUserInfo>(url, cancellationToken: ct);
+
+            if (userInfo?.Id == null)
+                throw new InvalidOperationException("Facebook did not return user info");
+
+            return userInfo;
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            throw new UnauthorizedAccessException("Invalid Facebook access token", ex);
+        }
     }
 
     public async Task<TokenResponseDto> HandleFacebookLoginAsync(

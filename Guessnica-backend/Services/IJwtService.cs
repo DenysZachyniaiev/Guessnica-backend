@@ -7,4 +7,5 @@ using System.Threading.Tasks;
 public interface IJwtService
 {
     Task<TokenResponseDto> GenerateTokenAsync(AppUser user);
+    
 }

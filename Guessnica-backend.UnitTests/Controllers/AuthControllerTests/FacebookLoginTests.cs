@@ -230,7 +230,34 @@ public class FacebookLoginTests
             It.IsAny<IJwtService>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
+/* [Fact] Przemyśl doddanie modelu ApiResponse
+    public async Task FacebookLogin_WithExpiredJwtToken_ReturnsUnauthorized()
+    {
+        var dto = new FacebookLoginDto { AccessToken = "valid-facebook-token" };
+        var expiredToken = new TokenResponseDto
+        {
+            Token = "expired-token",
+            ExpiresAt = DateTime.UtcNow.AddHours(-1)
+        };
 
+        _facebookAuthServiceMock
+            .Setup(x => x.HandleFacebookLoginAsync(
+                It.IsAny<FacebookLoginDto>(),
+                It.IsAny<UserManager<AppUser>>(),
+                It.IsAny<IJwtService>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expiredToken);
+
+        var result = await _controller.FacebookLogin(dto, _facebookAuthServiceMock.Object);
+
+        var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(result);
+        Assert.Equal(401, unauthorizedResult.StatusCode);
+
+        var response = unauthorizedResult.Value as dynamic;
+        Assert.NotNull(response);
+        Assert.Equal("Token is expired.", response?.message);
+    }
+*/
     [Fact]
     public async Task FacebookLogin_WhenServiceThrowsException_ReturnsInternalServerError()
     {
@@ -282,5 +309,34 @@ public class FacebookLoginTests
             It.IsAny<UserManager<AppUser>>(),
             It.IsAny<IJwtService>(),
             It.IsAny<CancellationToken>()), Times.Never);
+    }
+    [Fact]
+    public async Task FacebookLogin_OnSuccess_LogsProperInformation()
+    {
+        var dto = new FacebookLoginDto { AccessToken = "valid-token" };
+        var tokenResponse = new TokenResponseDto
+        {
+            Token = "jwt-token",
+            ExpiresAt = DateTime.UtcNow.AddHours(1)
+        };
+
+        _facebookAuthServiceMock
+            .Setup(x => x.HandleFacebookLoginAsync(
+                It.IsAny<FacebookLoginDto>(),
+                It.IsAny<UserManager<AppUser>>(),
+                It.IsAny<IJwtService>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tokenResponse);
+
+        await _controller.FacebookLogin(dto, _facebookAuthServiceMock.Object);
+
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Facebook login successful")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 }

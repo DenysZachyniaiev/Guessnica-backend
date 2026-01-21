@@ -204,8 +204,9 @@ builder.Services
     .ValidateOnStart();
 
 builder.Services.AddScoped<IAppEmailSender, MailKitEmailSender>();
-
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<ILocationService, LocationService>();
+builder.Services.AddScoped<IRiddleService, RiddleService>();
 
 var app = builder.Build();
 
@@ -217,19 +218,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Guessnica API v1");
-        c.RoutePrefix = string.Empty;               // Swagger na http://localhost:xxxx/ (bardzo wygodne w dev)
-        // c.RoutePrefix = "swagger";
+        c.RoutePrefix = string.Empty;
         c.EnableTryItOutByDefault();
         c.DisplayRequestDuration();
         c.DefaultModelsExpandDepth(-1);
     });
 }
 
+app.UseStaticFiles();
 app.UseCors(app.Environment.IsDevelopment() ? "DevCors" : "ProdCors");
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Map("/error", (HttpContext httpContext) =>
@@ -246,37 +245,90 @@ app.Map("/error", (HttpContext httpContext) =>
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    var userManager = services.GetRequiredService<UserManager<AppUser>>();
-    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+    var logger = services.GetRequiredService<ILogger<Program>>();
     
-    foreach (var r in new[] { "User", "Admin" })
+    try
     {
-        if (!await roleManager.RoleExistsAsync(r))
+        var context = services.GetRequiredService<AppDbContext>();
+        
+        logger.LogInformation("Checking for pending migrations...");
+        
+        var pendingMigrations = context.Database.GetPendingMigrations();
+        if (pendingMigrations.Any())
         {
-            await roleManager.CreateAsync(new IdentityRole(r));
+            logger.LogInformation("Applying {Count} pending migrations", pendingMigrations.Count());
+            context.Database.Migrate();
+            logger.LogInformation("Migrations applied successfully");
+        }
+        else
+        {
+            logger.LogInformation("Database is up to date");
         }
     }
-    
-    var seedEmail = "test@example.com";
-    var user = await userManager.FindByEmailAsync(seedEmail);
-    if (user == null)
+    catch (Exception ex)
     {
-        user = new AppUser
-        {
-            UserName = seedEmail,
-            Email = seedEmail,
-            DisplayName = "Test User",
-            EmailConfirmed = true
-        };
-        var create = await userManager.CreateAsync(user, "Haslo123!");
-        if (!create.Succeeded)
-            throw new Exception(string.Join("; ", create.Errors.Select(e => $"{e.Code}: {e.Description}")));
-    }
-
-    if (!await userManager.IsInRoleAsync(user, "User"))
-    {
-        await userManager.AddToRoleAsync(user, "User");
+        logger.LogError(ex, "An error occurred while migrating the database");
+        throw;
     }
 }
 
+if (app.Environment.EnvironmentName != "Testing")
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
+        var userManager = services.GetRequiredService<UserManager<AppUser>>();
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+        
+        foreach (var r in new[] { "User", "Admin" })
+        {
+            if (!await roleManager.RoleExistsAsync(r))
+            {
+                await roleManager.CreateAsync(new IdentityRole(r));
+            }
+        }
+        
+        var userEmail = "test@example.com";
+        var user = await userManager.FindByEmailAsync(userEmail);
+        if (user == null)
+        {
+            user = new AppUser
+            {
+                UserName = userEmail,
+                Email = userEmail,
+                DisplayName = "Test User",
+                EmailConfirmed = true
+            };
+            var createUser = await userManager.CreateAsync(user, "Haslo123!");
+            if (!createUser.Succeeded)
+                throw new Exception(string.Join("; ", createUser.Errors.Select(e => $"{e.Code}: {e.Description}")));
+        }
+        if (!await userManager.IsInRoleAsync(user, "User"))
+        {
+            await userManager.AddToRoleAsync(user, "User");
+        }
+        
+        var adminEmail = "admin@example.com";
+        var admin = await userManager.FindByEmailAsync(adminEmail);
+        if (admin == null)
+        {
+            admin = new AppUser
+            {
+                UserName = adminEmail,
+                Email = adminEmail,
+                DisplayName = "Admin User",
+                EmailConfirmed = true
+            };
+            var createAdmin = await userManager.CreateAsync(admin, "Admin123!");
+            if (!createAdmin.Succeeded)
+                throw new Exception(string.Join("; ", createAdmin.Errors.Select(e => $"{e.Code}: {e.Description}")));
+        }
+        if (!await userManager.IsInRoleAsync(admin, "Admin"))
+        {
+            await userManager.AddToRoleAsync(admin, "Admin");
+        }
+    }
+}
 app.Run();
+
+public partial class Program { }

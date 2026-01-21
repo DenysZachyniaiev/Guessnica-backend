@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication;
 using Guessnica_backend.Models;
 using Guessnica_backend.Services;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Guessnica_backend.Tests.Controllers;
 
@@ -65,10 +66,24 @@ public class ConfirmEmailTests
             _signInManagerMock.Object,
             _jwtServiceMock.Object,
             _loggerMock.Object);
+        
+    }
+    private async Task TestBadRequest(string? userId, string? token, string expectedMessage)
+    {
+        var result = await _controller.ConfirmEmail(userId!, token!);
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(400, badRequestResult.StatusCode);
+
+        var value = badRequestResult.Value;
+        Assert.NotNull(value);
+        var messageProperty = value.GetType().GetProperty("message");
+        Assert.NotNull(messageProperty);
+        var message = messageProperty.GetValue(value) as string;
+        Assert.Equal(expectedMessage, message);
     }
 
     [Fact]
-    public async Task ConfirmEmail_WithValidParameters_ReturnsOkWithSuccessMessage()
+    public async Task AuthControllerTests_ConfirmEmail_WithValidParameters_ReturnsOkWithSuccessMessage()
     {
         var userId = "user-id-123";
         var token = "valid-token";
@@ -105,7 +120,7 @@ public class ConfirmEmailTests
             Times.Once);
     }
 
-    [Fact]
+     [Fact  (Skip = "This is old version of ConfirmEmail_WithNullUserId_ReturnsBadRequest, currently not in use.")]
     public async Task ConfirmEmail_WithNullUserId_ReturnsBadRequest()
     {
         string? userId = null;
@@ -126,7 +141,7 @@ public class ConfirmEmailTests
         _userManagerMock.Verify(x => x.FindByIdAsync(It.IsAny<string>()), Times.Never);
     }
 
-    [Fact]
+    [Fact (Skip = "This is old version of ConfirmEmail_WithEmptyUserId_ReturnsBadRequest, currently not in use.")]
     public async Task ConfirmEmail_WithEmptyUserId_ReturnsBadRequest()
     {
         var userId = "";
@@ -147,7 +162,7 @@ public class ConfirmEmailTests
         _userManagerMock.Verify(x => x.FindByIdAsync(It.IsAny<string>()), Times.Never);
     }
 
-    [Fact]
+    [Fact (Skip = "This is old version of ConfirmEmail_WithNullToken_ReturnsBadRequest, currently not in use.")]
     public async Task ConfirmEmail_WithNullToken_ReturnsBadRequest()
     {
         var userId = "user-id-123";
@@ -168,7 +183,7 @@ public class ConfirmEmailTests
         _userManagerMock.Verify(x => x.FindByIdAsync(It.IsAny<string>()), Times.Never);
     }
 
-    [Fact]
+    [Fact (Skip = "This is old version of ConfirmEmail_WithEmptyToken_ReturnsBadRequest, currently not in use.")]
     public async Task ConfirmEmail_WithEmptyToken_ReturnsBadRequest()
     {
         var userId = "user-id-123";
@@ -188,9 +203,32 @@ public class ConfirmEmailTests
 
         _userManagerMock.Verify(x => x.FindByIdAsync(It.IsAny<string>()), Times.Never);
     }
+    [Fact]
+    public async Task AuthControllerTests_ConfirmEmail_WithNullUserId_ReturnsBadRequest()
+    {
+        await TestBadRequest(null, "valid-token", "Invalid confirmation link.");
+    }
 
     [Fact]
-    public async Task ConfirmEmail_WithNonExistentUser_ReturnsBadRequest()
+    public async Task AuthControllerTests_ConfirmEmail_WithEmptyUserId_ReturnsBadRequest()
+    {
+        await TestBadRequest("", "valid-token", "Invalid confirmation link.");
+        _userManagerMock.Verify(x => x.ConfirmEmailAsync(It.IsAny<AppUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AuthControllerTests_ConfirmEmail_WithNullToken_ReturnsBadRequest()
+    {
+        await TestBadRequest("user-id-123", null, "Invalid confirmation link.");
+    }
+
+    [Fact]
+    public async Task AuthControllerTests_ConfirmEmail_WithEmptyToken_ReturnsBadRequest()
+    {
+        await TestBadRequest("user-id-123", "", "Invalid confirmation link.");
+    }
+    [Fact]
+    public async Task AuthControllerTests_ConfirmEmail_WithNonExistentUser_ReturnsBadRequest()
     {
         var userId = "non-existent-id";
         var token = "valid-token";
@@ -223,7 +261,7 @@ public class ConfirmEmailTests
     }
 
     [Fact]
-    public async Task ConfirmEmail_WithInvalidToken_ReturnsBadRequest()
+    public async Task AuthControllerTests_ConfirmEmail_WithInvalidToken_ReturnsBadRequest()
     {
         var userId = "user-id-123";
         var token = "invalid-token";
@@ -257,7 +295,7 @@ public class ConfirmEmailTests
     }
 
     [Fact]
-    public async Task ConfirmEmail_CallsConfirmEmailAsync()
+    public async Task AuthControllerTests_ConfirmEmail_CallsConfirmEmailAsync()
     {
         var userId = "user-id-123";
         var token = "valid-token";
@@ -274,7 +312,7 @@ public class ConfirmEmailTests
     }
 
     [Fact]
-    public async Task ConfirmEmail_UserAlreadyConfirmed_ReturnsOk()
+    public async Task AuthControllerTests_ConfirmEmail_UserAlreadyConfirmed_ReturnsOk()
     {
         var userId = "user-id-123";
         var token = "valid-token";
@@ -302,35 +340,56 @@ public class ConfirmEmailTests
         Assert.Equal("Email confirmed successfully!", message);
         _userManagerMock.Verify(x => x.ConfirmEmailAsync(user, token), Times.Once);
     }
+    
+/* [Fact] Przemyśl doddanie modelu ApiResponse
+ public async Task AuthControllerTests_ConfirmEmail_WithExpiredToken_ReturnsInternalServerError()
+ {
+     var userId = "user-id-123";
+     var token = "expired-token";
 
-    [Fact]
-    public async Task ConfirmEmail_WhenExceptionOccurs_ReturnsInternalServerError()
-    {
-        var userId = "user-id-123";
-        var token = "valid-token";
+     _userManagerMock.Setup(x => x.FindByIdAsync(userId))
+         .ThrowsAsync(new Exception("Token expired"));
 
-        _userManagerMock.Setup(x => x.FindByIdAsync(userId))
-            .ThrowsAsync(new System.Exception("Database connection failed"));
+     var result = await _controller.ConfirmEmail(userId, token);
 
-        var result = await _controller.ConfirmEmail(userId, token);
+     var objectResult = Assert.IsType<ObjectResult>(result);
+     Assert.Equal(500, objectResult.StatusCode);
+     Assert.NotNull(objectResult.Value);
 
-        var objectResult = Assert.IsAssignableFrom<ObjectResult>(result);
-        Assert.Equal(500, objectResult.StatusCode);
+     var response = objectResult.Value as dynamic;
+     Assert.NotNull(response);
 
-        var value = objectResult.Value;
-        Assert.NotNull(value);
-        var messageProperty = value.GetType().GetProperty("message");
-        Assert.NotNull(messageProperty);
-        var message = messageProperty.GetValue(value) as string;
-        Assert.Contains("error occurred during email confirmation", message, StringComparison.OrdinalIgnoreCase);
+     Assert.Equal("An error occurred during email confirmation. Please try again later.", (string)response.message);
+ }
+*/
+ [Fact]
+ public async Task AuthControllerTests_ConfirmEmail_WhenExceptionOccurs_ReturnsInternalServerError()
+ {
+     var userId = "user-id-123";
+     var token = "valid-token";
 
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Unexpected error")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
+     _userManagerMock.Setup(x => x.FindByIdAsync(userId))
+         .ThrowsAsync(new System.Exception("Database connection failed"));
+
+     var result = await _controller.ConfirmEmail(userId, token);
+
+     var objectResult = Assert.IsAssignableFrom<ObjectResult>(result);
+     Assert.Equal(500, objectResult.StatusCode);
+
+     var value = objectResult.Value;
+     Assert.NotNull(value);
+     var messageProperty = value.GetType().GetProperty("message");
+     Assert.NotNull(messageProperty);
+     var message = messageProperty.GetValue(value) as string;
+     Assert.Contains("error occurred during email confirmation", message, StringComparison.OrdinalIgnoreCase);
+
+     _loggerMock.Verify(
+         x => x.Log(
+             LogLevel.Error,
+             It.IsAny<EventId>(),
+             It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Unexpected error")),
+             It.IsAny<Exception?>(),
+             It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+         Times.Once);
+ }
 }

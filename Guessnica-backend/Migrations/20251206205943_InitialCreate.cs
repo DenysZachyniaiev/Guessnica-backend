@@ -7,14 +7,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Guessnica_backend.Migrations
 {
     /// <inheritdoc />
-    public partial class AddIdentityTables : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "Users");
-
             migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 columns: table => new
@@ -34,8 +31,7 @@ namespace Guessnica_backend.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "text", nullable: false),
-                    DisplayName = table.Column<string>(type: "text", nullable: false),
-                    Role = table.Column<string>(type: "text", nullable: false),
+                    DisplayName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -54,6 +50,22 @@ namespace Guessnica_backend.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Locations",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Latitude = table.Column<double>(type: "double precision", nullable: false),
+                    Longitude = table.Column<double>(type: "double precision", nullable: false),
+                    ImageUrl = table.Column<string>(type: "text", nullable: false),
+                    ShortDescription = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Locations", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -162,6 +174,33 @@ namespace Guessnica_backend.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "UserVerificationCodes",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<string>(type: "text", nullable: false),
+                    CodeHash = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    ExpiresAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UsedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Attempts = table.Column<int>(type: "integer", nullable: false),
+                    Purpose = table.Column<string>(type: "character varying(40)", maxLength: 40, nullable: false),
+                    ResetSessionId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ResetSessionExpiresAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IdentityResetToken = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserVerificationCodes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserVerificationCodes_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
@@ -198,6 +237,16 @@ namespace Guessnica_backend.Migrations
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserVerificationCodes_ResetSessionId",
+                table: "UserVerificationCodes",
+                column: "ResetSessionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserVerificationCodes_UserId_Purpose_ExpiresAtUtc",
+                table: "UserVerificationCodes",
+                columns: new[] { "UserId", "Purpose", "ExpiresAtUtc" });
         }
 
         /// <inheritdoc />
@@ -219,23 +268,16 @@ namespace Guessnica_backend.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "Locations");
+
+            migrationBuilder.DropTable(
+                name: "UserVerificationCodes");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
-
-            migrationBuilder.CreateTable(
-                name: "Users",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Name = table.Column<string>(type: "text", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Users", x => x.Id);
-                });
         }
     }
 }

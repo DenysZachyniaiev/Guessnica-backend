@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Guessnica_backend.Models;
 using Guessnica_backend.Services;
 using Guessnica_backend.Dtos;
+using Microsoft.Extensions.Configuration;
 
 namespace Guessnica_backend.Tests.Controllers.AuthControllerTests;
 
@@ -18,6 +19,7 @@ public class FacebookLoginTests
     private readonly Mock<ILogger<AuthController>> _loggerMock;
     private readonly Mock<IFacebookAuthService> _facebookAuthServiceMock;
     private readonly AuthController _controller;
+    private readonly Mock<IConfiguration> _configuration;
 
     public FacebookLoginTests()
     {
@@ -48,6 +50,7 @@ public class FacebookLoginTests
         var signInLoggerMock = new Mock<ILogger<SignInManager<AppUser>>>();
         var schemesMock = new Mock<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>();
         var confirmationMock = new Mock<IUserConfirmation<AppUser>>();
+        _configuration = new Mock<IConfiguration>();
 
         _signInManagerMock = new Mock<SignInManager<AppUser>>(
             _userManagerMock.Object,
@@ -66,7 +69,8 @@ public class FacebookLoginTests
             _userManagerMock.Object,
             _signInManagerMock.Object,
             _jwtServiceMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            _configuration.Object);
     }
 
     [Fact]

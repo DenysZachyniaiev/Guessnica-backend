@@ -55,7 +55,7 @@ public class LocationService : ILocationService
 
         if (image != null && image.Length > 0)
         {
-            DeleteImage(loc.ImageUrl);
+            DeleteImage(loc.ImageUrl); 
             loc.ImageUrl = await SaveImageAsync(Guid.NewGuid().ToString(), image);
         }
 
@@ -104,8 +104,11 @@ public class LocationService : ILocationService
         return deletedCount;
     }
     
-    private async Task<string> SaveImageAsync(string fileKey, IFormFile file)
+    private async Task<string> SaveImageAsync(string fileKey, IFormFile file, int maxFileSizeBytes=5*1024*1024)
     {
+        if (file.Length > maxFileSizeBytes)
+            throw new Exception($"File too large. Maximum allowed is {maxFileSizeBytes / (1024*1024)} MB.");
+        
         var ext = Path.GetExtension(file.FileName).ToLower();
         if (ext != ".jpg" && ext != ".png" && ext != ".jpeg")
             throw new Exception("Invalid image type");

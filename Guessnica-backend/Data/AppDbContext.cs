@@ -11,6 +11,8 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole, string>
 
     public DbSet<UserVerificationCode> UserVerificationCodes => Set<UserVerificationCode>();
     
+    public DbSet<UserRiddle> UserRiddles => Set<UserRiddle>();
+    
     public DbSet<Location> Locations { get; set; }
     
     public DbSet<Riddle> Riddles { get; set; }
@@ -24,5 +26,18 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole, string>
         
         b.Entity<UserVerificationCode>()
             .HasIndex(x => x.ResetSessionId);
+        
+        b.Entity<UserRiddle>()
+            .HasIndex(ur => new { ur.UserId, ur.AssignedAt });
+
+        b.Entity<UserRiddle>()
+            .HasOne(ur => ur.User)
+            .WithMany()
+            .HasForeignKey(ur => ur.UserId);
+
+        b.Entity<UserRiddle>()
+            .HasOne(ur => ur.Riddle)
+            .WithMany()
+            .HasForeignKey(ur => ur.RiddleId);
     }
 }

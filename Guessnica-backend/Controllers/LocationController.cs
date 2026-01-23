@@ -66,7 +66,14 @@ public class LocationController : ControllerBase
             ShortDescription = dto.ShortDescription
         };
 
-        loc = await _locationService.CreateAsync(loc, dto.Image);
+        try
+        {
+            loc = await _locationService.CreateAsync(loc, dto.Image);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
 
         return CreatedAtAction(nameof(Get), new { id = loc.Id }, new LocationResponseDto
         {

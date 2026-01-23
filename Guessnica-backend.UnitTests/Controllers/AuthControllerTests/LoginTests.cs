@@ -8,6 +8,7 @@ using Guessnica_backend.Services;
 using Guessnica_backend.Dtos;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Configuration;
 
 namespace Guessnica_backend.Tests.Controllers;
 
@@ -18,6 +19,7 @@ public class LoginTests
     private readonly Mock<IJwtService> _jwtServiceMock;
     private readonly Mock<ILogger<AuthController>> _loggerMock;
     private readonly AuthController _controller;
+    private readonly Mock<IConfiguration> _configuration;
 
     public LoginTests()
     {
@@ -48,12 +50,14 @@ public class LoginTests
 
         _jwtServiceMock = new Mock<IJwtService>();
         _loggerMock = new Mock<ILogger<AuthController>>();
+        _configuration = new Mock<IConfiguration>();
 
         _controller = new AuthController(
             _userManagerMock.Object,
             _signInManagerMock.Object,
             _jwtServiceMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            _configuration.Object);
     }
     
     [Fact]

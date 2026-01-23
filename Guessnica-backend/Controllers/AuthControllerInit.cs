@@ -16,17 +16,20 @@ public class AuthController : ControllerBase
     private readonly SignInManager<AppUser> _signInManager;
     private readonly IJwtService _jwtService;
     private readonly ILogger<AuthController> _logger;
+    private IConfiguration _configuration;
 
     public AuthController(
         UserManager<AppUser> userManager,
         SignInManager<AppUser> signInManager,
         IJwtService jwtService,
-        ILogger<AuthController> logger)
+        ILogger<AuthController> logger,
+        IConfiguration configuration)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _jwtService = jwtService;
         _logger = logger;
+        _configuration = configuration;
     }
 
     [AllowAnonymous]
@@ -231,8 +234,8 @@ public class AuthController : ControllerBase
                 try
                 {
                     var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    var confirmationLink = Url.Action("ConfirmEmail", "Auth",
-                        new { userId = user.Id, token }, Request.Scheme);
+                    var frontendBase = _configuration["Frontend:BaseUrl"];
+                    var confirmationLink = $"{frontendBase}/confirm-email?userId={user.Id}&token={Uri.EscapeDataString(token)}";
 
                     await emailSender.SendAsync(email, "Confirm your Guessnica account",
                         $"Welcome! Please confirm your email by clicking this link: {confirmationLink}");

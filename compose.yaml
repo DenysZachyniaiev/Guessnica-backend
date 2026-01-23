@@ -11,6 +11,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
     volumes:
       - images:/app/wwwroot/images/locations
+    networks:
+      - guessnica
   db:
     image: postgres:16
     container_name: guessnica-db
@@ -22,6 +24,12 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - guessnica
+
+networks:
+  guessnica:
+    external: true
 
 volumes:
   pgdata:

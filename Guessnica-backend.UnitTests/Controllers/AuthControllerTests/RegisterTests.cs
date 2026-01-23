@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication;
 using Guessnica_backend.Models;
 using Guessnica_backend.Services;
 using Guessnica_backend.Dtos;
+using Microsoft.Extensions.Configuration;
 
 namespace Guessnica_backend.Tests.Controllers
 {
@@ -21,6 +22,7 @@ namespace Guessnica_backend.Tests.Controllers
         private readonly Mock<ILogger<AuthController>> _loggerMock;
         private readonly Mock<IAppEmailSender> _emailSenderMock;
         private readonly AuthController _controller;
+        private readonly Mock<IConfiguration> _configuration;
 
         public RegisterTests()
         {
@@ -52,12 +54,14 @@ namespace Guessnica_backend.Tests.Controllers
             _jwtServiceMock = new Mock<IJwtService>();
             _loggerMock = new Mock<ILogger<AuthController>>();
             _emailSenderMock = new Mock<IAppEmailSender>();
+            _configuration = new Mock<IConfiguration>();
 
             _controller = new AuthController(
                 _userManagerMock.Object,
                 _signInManagerMock.Object,
                 _jwtServiceMock.Object,
-                _loggerMock.Object);
+                _loggerMock.Object,
+                _configuration.Object);
 
             var urlHelperMock = new Mock<IUrlHelper>();
             urlHelperMock.Setup(x => x.Action(It.IsAny<UrlActionContext>()))

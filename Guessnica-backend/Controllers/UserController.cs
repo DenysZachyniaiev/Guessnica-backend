@@ -29,11 +29,15 @@ public class UserController: ControllerBase
     {
         var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
                      ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null) return Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(userId))
+            return Unauthorized();
 
         var user = await _userManager.FindByIdAsync(userId);
-        if (user == null) return NotFound();
+        if (user == null)
+            return NotFound();
 
+        // Dodano URL avatara z UserController!
         var roles = await _userManager.GetRolesAsync(user);
         return Ok(new MeResponseDto
         {

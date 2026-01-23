@@ -28,6 +28,7 @@ public class RiddleTests
             ShortDescription = "Former headquarters of the Gestapo and UB"
         };
     }
+
     [Fact]
     public void RiddleTests_Riddle_WithValidData_ShouldPassValidation()
     {
@@ -42,9 +43,8 @@ public class RiddleTests
             LocationId = 1,
             Location = location
         };
-        
+
         var validationResults = ValidateModel(riddle);
-        
         Assert.Empty(validationResults);
     }
 
@@ -52,7 +52,7 @@ public class RiddleTests
     public void RiddleTests_Riddle_DescriptionIsRequired()
     {
         var property = typeof(Riddle).GetProperty("Description");
-        
+
         Assert.NotNull(property);
         Assert.Equal(typeof(string), property.PropertyType);
       
@@ -74,7 +74,8 @@ public class RiddleTests
     {
         Assert.Equal(expectedValue, (int)difficulty);
     }
-    [Fact (Skip = "Need to implement custom validation for required LocationId if required")]
+
+    [Fact(Skip = "Need to implement custom validation for required LocationId if required")]
     public void Riddle_WithoutLocation_ShouldFailValidation()
     {
         var riddle = new Riddle
@@ -84,13 +85,14 @@ public class RiddleTests
             TimeLimitSeconds = 300,
             MaxDistanceMeters = 1000,
             LocationId = 0,
-            Location = null
+            Location = null!
         };
 
         var validationResults = ValidateModel(riddle);
 
         Assert.Contains(validationResults, v => v.MemberNames.Contains("LocationId"));
     }
+
     [Fact]
     public void RiddleTests_Riddle_WithZeroTimeLimitSeconds_ShouldPassValidation()
     {
@@ -208,7 +210,7 @@ public class RiddleTests
             LocationId = 1,
             Location = location
         };
-
+        
         Assert.NotNull(riddle.Location);
         Assert.Equal(1, riddle.LocationId);
         Assert.Equal(location.Id, riddle.Location.Id);
@@ -234,7 +236,7 @@ public class RiddleTests
         riddle.TimeLimitSeconds = 600;
         riddle.MaxDistanceMeters = 2000;
         riddle.LocationId = 2;
-        
+
         Assert.Equal(42, riddle.Id);
         Assert.Equal("Find St. Mary's Church in Legnica", riddle.Description);
         Assert.Equal(RiddleDifficulty.Hard, riddle.Difficulty);
@@ -279,25 +281,29 @@ public class RiddleTests
             LocationId = 1,
             Location = location
         };
+
         var validationResults = ValidateModel(riddle);
 
         Assert.Empty(validationResults);
     }
-    [Fact (Skip = "Need to implement custom validation for max length if required")]
+
+    [Fact(Skip = "Need to implement custom validation for max length if required")]
     public void RiddleTests_Riddle_WithoutDescription_ShouldFailValidation()
     {
         var location = CreateValidLocation();
         var riddle = new Riddle
         {
-            Description = null,
+            Description = null!,
             LocationId = 1,
             Location = location
         };
 
         var validationResults = ValidateModel(riddle);
 
-        Assert.Contains(validationResults, v => 
-            v.MemberNames.Contains("Description") && 
-            v.ErrorMessage.Contains("The Description field is required"));
+        Assert.NotEmpty(validationResults);
+        var descriptionError = validationResults.FirstOrDefault(v => 
+            v.MemberNames.Contains("Description"));
+        Assert.NotNull(descriptionError);
+        Assert.Contains("Description", descriptionError.ErrorMessage ?? string.Empty);
     }
 }

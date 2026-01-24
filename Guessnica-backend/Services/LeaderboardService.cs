@@ -1,6 +1,7 @@
 namespace Guessnica_backend.Services;
 
 using Data;
+using Dtos;
 using Microsoft.EntityFrameworkCore;
 
 public class LeaderboardService : ILeaderboardService
@@ -12,74 +13,167 @@ public class LeaderboardService : ILeaderboardService
         _db = db;
     }
 
-    public async Task<object> GetLeaderboardAsync(int days, int count)
+    public async Task<List<LeaderboardEntryDto>> GetLeaderboardAsync(int days, int count, LeaderboardCategory category)
     {
         var since = DateTime.UtcNow.AddDays(-days);
-
-        var leaderboard = await _db.UserRiddles
-            .Where(ur => ur.AnsweredAt >= since && ur.IsCorrect == true)
+        
+        var aggregated = await _db.UserRiddles
+            .Where(ur => ur.AnsweredAt >= since)
             .GroupBy(ur => ur.UserId)
             .Select(g => new
             {
                 UserId = g.Key,
-                TotalPoints = g.Sum(ur => ur.Points ?? 0),
-                CorrectAnswers = g.Count()
-            })
-            .OrderByDescending(x => x.TotalPoints)
-            .Take(count)
-            .ToListAsync();
 
-        var userIds = leaderboard.Select(l => l.UserId).ToList();
+                GamesPlayed = g.Count(),
+
+                CorrectAnswers = g.Count(ur => ur.IsCorrect == true),
+
+                TotalPoints = g.Sum(ur => (ur.Points ?? 0)),
+
+                AverageTimeSeconds = g.Average(ur => (double?)ur.TimeSeconds),
+            })
+            .ToListAsync();
+        
+        var withAccuracy = aggregated.Select(x => new
+        {
+            x.UserId,
+            x.GamesPlayed,
+            x.CorrectAnswers,
+            x.TotalPoints,
+            x.AverageTimeSeconds,
+            Accuracy = x.GamesPlayed == 0 ? (double?)null : (double)x.CorrectAnswers / x.GamesPlayed
+        });
+        
+        IEnumerable<dynamic> ordered = category switch
+        {
+            LeaderboardCategory.TotalScore =>
+                withAccuracy.OrderByDescending(x => (int)x.TotalPoints),
+
+            LeaderboardCategory.Accuracy =>
+                withAccuracy.OrderByDescending(x => (double?)(x.Accuracy ?? -1))
+                            .ThenByDescending(x => (int)x.CorrectAnswers),
+
+            LeaderboardCategory.GamesPlayed =>
+                withAccuracy.OrderByDescending(x => (int)x.GamesPlayed),
+
+            LeaderboardCategory.AverageTime =>
+                withAccuracy.OrderBy(x => (double?)(x.AverageTimeSeconds ?? double.MaxValue)),
+
+            _ => withAccuracy.OrderByDescending(x => (int)x.TotalPoints)
+        };
+
+        var top = ordered.Take(count).ToList();
+        
+        var userIds = top.Select(x => (string)x.UserId).ToList();
+
         var users = await _db.Users
             .Where(u => userIds.Contains(u.Id))
             .Select(u => new { u.Id, u.DisplayName, u.AvatarUrl })
             .ToListAsync();
-
-        var result = leaderboard.Select((entry, index) => new
+        
+        var result = top.Select((x, index) =>
         {
-            Rank = index + 1,
-            UserId = entry.UserId,
-            DisplayName = users.FirstOrDefault(u => u.Id == entry.UserId)?.DisplayName ?? "Unknown",
-            AvatarUrl = users.FirstOrDefault(u => u.Id == entry.UserId)?.AvatarUrl,
-            TotalPoints = entry.TotalPoints,
-            CorrectAnswers = entry.CorrectAnswers
+            var u = users.FirstOrDefault(z => z.Id == (string)x.UserId);
+
+            return new LeaderboardEntryDto
+            {
+                Rank = index + 1,
+                UserId = (string)x.UserId,
+                DisplayName = u?.DisplayName ?? "Unknown",
+                AvatarUrl = u?.AvatarUrl,
+
+                TotalPoints = (int)x.TotalPoints,
+                CorrectAnswers = (int)x.CorrectAnswers,
+                GamesPlayed = (int)x.GamesPlayed,
+                AverageTimeSeconds = (double?)x.AverageTimeSeconds,
+                Accuracy = (double?)x.Accuracy
+            };
         }).ToList();
 
         return result;
     }
-    public async Task<object> GetUserRankAsync(string userId, int days)
+
+    public async Task<UserRankDto> GetUserRankAsync(string userId, int days, LeaderboardCategory category)
     {
         var since = DateTime.UtcNow.AddDays(-days);
 
-        var allRanks = await _db.UserRiddles
-            .Where(ur => ur.AnsweredAt >= since && ur.IsCorrect == true)
+        var aggregated = await _db.UserRiddles
+            .Where(ur => ur.AnsweredAt >= since)
             .GroupBy(ur => ur.UserId)
             .Select(g => new
             {
                 UserId = g.Key,
-                TotalPoints = g.Sum(ur => ur.Points ?? 0)
+                GamesPlayed = g.Count(),
+                CorrectAnswers = g.Count(ur => ur.IsCorrect == true),
+                TotalPoints = g.Sum(ur => (ur.Points ?? 0)),
+                AverageTimeSeconds = g.Average(ur => (double?)ur.TimeSeconds),
             })
-            .OrderByDescending(x => x.TotalPoints)
             .ToListAsync();
 
-        var userEntry = allRanks.FirstOrDefault(r => r.UserId == userId);
+        var withAccuracy = aggregated.Select(x => new
+        {
+            x.UserId,
+            x.GamesPlayed,
+            x.CorrectAnswers,
+            x.TotalPoints,
+            x.AverageTimeSeconds,
+            Accuracy = x.GamesPlayed == 0 ? (double?)null : (double)x.CorrectAnswers / x.GamesPlayed
+        });
+        
+        IEnumerable<dynamic> ordered = category switch
+        {
+            LeaderboardCategory.TotalScore =>
+                withAccuracy.OrderByDescending(x => (int)x.TotalPoints),
+
+            LeaderboardCategory.Accuracy =>
+                withAccuracy.OrderByDescending(x => (double?)(x.Accuracy ?? -1))
+                            .ThenByDescending(x => (int)x.CorrectAnswers),
+
+            LeaderboardCategory.GamesPlayed =>
+                withAccuracy.OrderByDescending(x => (int)x.GamesPlayed),
+
+            LeaderboardCategory.AverageTime =>
+                withAccuracy.OrderBy(x => (double?)(x.AverageTimeSeconds ?? double.MaxValue)),
+
+            _ => withAccuracy.OrderByDescending(x => (int)x.TotalPoints)
+        };
+
+        var ranked = ordered.ToList();
+
+        var totalUsers = ranked.Count;
+        var userEntry = ranked.FirstOrDefault(x => (string)x.UserId == userId);
+
         if (userEntry == null)
         {
-            return new
+            return new UserRankDto
             {
-                Rank = 0,
+                Rank = null,
+                TotalUsers = totalUsers,
+                Days = days,
+                Category = category,
+
                 TotalPoints = 0,
-                TotalUsers = allRanks.Count
+                CorrectAnswers = 0,
+                GamesPlayed = 0,
+                AverageTimeSeconds = null,
+                Accuracy = null
             };
         }
 
-        var rank = allRanks.IndexOf(userEntry) + 1;
+        var rank = ranked.IndexOf(userEntry) + 1;
 
-        return new
+        return new UserRankDto
         {
             Rank = rank,
-            TotalPoints = userEntry.TotalPoints,
-            TotalUsers = allRanks.Count
+            TotalUsers = totalUsers,
+            Days = days,
+            Category = category,
+
+            TotalPoints = (int)userEntry.TotalPoints,
+            CorrectAnswers = (int)userEntry.CorrectAnswers,
+            GamesPlayed = (int)userEntry.GamesPlayed,
+            AverageTimeSeconds = (double?)userEntry.AverageTimeSeconds,
+            Accuracy = (double?)userEntry.Accuracy
         };
     }
 }

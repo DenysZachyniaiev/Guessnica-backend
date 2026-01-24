@@ -37,13 +37,13 @@ EOF
 fi
 
 # Sprawdź czy kontenery już istnieją
-if docker ps -a | grep -q guessnica-backend-app; then
+if docker ps -a | grep -q guessnica-backend; then
     echo -e "${YELLOW}Kontenery już istnieją. Usuwam stare kontenery...${NC}"
     docker-compose down -v
 fi
 
 echo -e "${BLUE}Budowanie obrazów Docker...${NC}"
-docker-compose build --no-cache
+docker compose build --no-cache
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}Błąd podczas budowania obrazów!${NC}"
@@ -52,7 +52,7 @@ fi
 
 echo ""
 echo -e "${BLUE}Uruchamianie kontenerów...${NC}"
-docker-compose up -d
+docker compose up -d
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}Błąd podczas uruchamiania kontenerów!${NC}"
@@ -65,18 +65,18 @@ sleep 10
 
 echo ""
 echo -e "${BLUE}Wykonywanie migracji bazy danych...${NC}"
-docker exec -it guessnica-backend-app dotnet ef database update
+docker exec -it guessnica-backend-dev dotnet ef database update --project Guessnica-backend --startup-project Guessnica-backend
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}Błąd podczas wykonywania migracji!${NC}"
     echo -e "${YELLOW}Sprawdź czy baza danych jest uruchomiona:${NC}"
-    echo -e "${YELLOW}docker-compose logs db${NC}"
+    echo -e "${YELLOW}docker compose logs db${NC}"
     exit 1
 fi
 
 echo ""
 echo -e "${BLUE}Inicjalizacja ról w bazie danych...${NC}"
-docker exec -it guessnica-backend-app dotnet run --seed 2>/dev/null || echo -e "${YELLOW} Brak seedera - pomiń ten krok${NC}"
+docker exec -it guessnica-backend-dev dotnet run --project Guessnica-backend --startup-project Guessnica-backend --seed 2>/dev/null || echo -e "${YELLOW} Brak seedera - pomiń ten krok${NC}"
 
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -90,7 +90,7 @@ echo -e "   🔹 pgAdmin:      ${GREEN}http://localhost:8081${NC}"
 echo -e "   🔹 PostgreSQL:   ${GREEN}localhost:5432${NC}"
 echo ""
 echo -e "${YELLOW}Przydatne komendy:${NC}"
-echo -e "   docker-compose logs -f app  ${BLUE}# Podgląd logów${NC}"
-echo -e "   docker-compose stop         ${BLUE}# Zatrzymanie${NC}"
-echo -e "   docker-compose down -v      ${BLUE}# Usunięcie wszystkiego${NC}"
+echo -e "   docker compose logs -f app  ${BLUE}# Podgląd logów${NC}"
+echo -e "   docker compose stop         ${BLUE}# Zatrzymanie${NC}"
+echo -e "   docker compose down -v      ${BLUE}# Usunięcie wszystkiego${NC}"
 echo ""

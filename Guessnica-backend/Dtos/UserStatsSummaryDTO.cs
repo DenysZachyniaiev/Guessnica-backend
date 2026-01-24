@@ -14,4 +14,7 @@ public class UserStatsSummaryDto
     public int BestStreak { get; set; }
 
     public DateTime AccountCreatedAt { get; set; }
+    
+    public double TotalDistanceMeters { get; set; }
+    public double AvgDistanceMeters { get; set; }
 }

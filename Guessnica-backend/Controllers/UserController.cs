@@ -63,29 +63,42 @@ public class UserController: ControllerBase
     }
     
     [HttpGet("me/history")]
-    public async Task<IActionResult> GetHistory()
+    public async Task<ActionResult<List<UserHistoryEntryDto>>> GetHistory()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-    
+
         var history = await _db.UserRiddles
+            .AsNoTracking()
             .Where(ur => ur.UserId == userId && ur.AnsweredAt != null)
+            .Include(ur => ur.Riddle)
+            .ThenInclude(r => r.Location)
             .OrderByDescending(ur => ur.AnsweredAt)
-            .Select(ur => new 
+            .Select(ur => new UserHistoryEntryDto
             {
-                ur.RiddleId,
-                ur.AnsweredAt,
-                ur.IsCorrect,
-                ur.Points
+                Id = ur.Id,
+                RiddleId = ur.RiddleId,
+                AnsweredAt = ur.AnsweredAt!.Value,
+
+                IsCorrect = ur.IsCorrect ?? false,
+                Points = ur.Points ?? 0,
+
+                DistanceMeters = ur.DistanceMeters,
+                TimeSeconds = ur.TimeSeconds,
+
+                LocationName = ur.Riddle.Location.ShortDescription
             })
             .ToListAsync();
-    
+
         return Ok(history);
     }
         
     [HttpPost("me/avatar")]
-    [RequestSizeLimit(5_000_000)] // 5MB limit
-    public async Task<IActionResult> UploadAvatar(IFormFile avatar)
+    [RequestSizeLimit(5_000_000)]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadAvatar([FromForm] AvatarUploadRequest request)
     {
+        var avatar = request.Avatar;
+
         if (avatar == null || avatar.Length == 0)
             return BadRequest(new { message = "No file uploaded" });
 
@@ -112,7 +125,7 @@ public class UserController: ControllerBase
     }
     
     [HttpGet("me/avatar")]
-    [AllowAnonymous]
+    [Authorize]
     public async Task<IActionResult> GetAvatar()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);

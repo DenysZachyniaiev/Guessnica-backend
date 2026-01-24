@@ -1,3 +1,5 @@
+using Guessnica_backend.Models;
+
 namespace Guessnica_backend.Controllers;
 
 using Dtos;
@@ -29,7 +31,19 @@ public class GameController : ControllerBase
         if (userId == null)
             return Unauthorized();
 
-        var ur = await _game.GetDailyRiddleAsync(userId);
+        UserRiddle ur;
+
+        try
+        {
+            ur = await _game.GetDailyRiddleAsync(userId);
+        }
+        catch (InvalidOperationException e)
+        {
+            return Conflict(new
+            {
+                message = e.Message
+            });
+        }
 
         return Ok(new DailyRiddleResponseDto
         {
@@ -42,8 +56,8 @@ public class GameController : ControllerBase
             MaxDistanceMeters = ur.Riddle.MaxDistanceMeters,
             IsAnswered = ur.AnsweredAt != null
         });
-
     }
+    
     [HttpPost("answer")]
     [Authorize(Roles = "User,Admin")]
     public async Task<IActionResult> SubmitAnswer([FromBody] SubmitAnswerDto dto)

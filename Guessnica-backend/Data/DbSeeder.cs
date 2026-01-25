@@ -35,22 +35,65 @@ public static class DbSeeder
             (51.2035m, 16.1555m, "Amfiteatr miejski", "https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b", "amfiteatr.jpg")
         };
 
-        using var httpClient = new HttpClient();
+        try
+        {
+            // SEEDOWANIE LOKALIZACJI
+            Console.WriteLine("Starting to seed locations...");
+
+            if (await db.Locations.CountAsync() >= locationData.Count)
+            {
+                Console.WriteLine("Locations already exist, skipping location seed.");
+            }
+            else
+            {
+                await SeedLocationsAsync(locationData, db, env);
+            }
+
+            // SEEDOWANIE ZAGADEK
+            Console.WriteLine("Starting to seed riddles...");
+
+            var savedLocations = await db.Locations.OrderBy(l => l.Id).ToListAsync();
+            if (await db.Riddles.CountAsync() < savedLocations.Count)
+            {
+                await SeedRiddlesAsync(savedLocations, db);
+            }
+            else
+            {
+                Console.WriteLine("Riddles already exist, skipping riddle seed.");
+            }
+
+            // SEEDOWANIE UŻYTKOWNIKÓW
+            await SeedUsersAsync(db, userManager);
+            Console.WriteLine("Database seeding completed!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred during seed: {ex.Message}");
+            throw; // Ew. logowanie większej ilości szczegółowości
+        }
+    }
+
+    private static async Task SeedLocationsAsync(
+        List<(decimal Lat, decimal Lon, string Desc, string Url, string File)> locationData,
+        AppDbContext db, 
+        IWebHostEnvironment env)
+    {
+        var httpClient = new HttpClient();
         httpClient.Timeout = TimeSpan.FromSeconds(30);
 
         var locations = new List<Location>();
+        var imagesPath = Path.Combine(env.WebRootPath, "images", "locations");
 
         foreach (var (lat, lon, desc, imageUrl, fileName) in locationData)
         {
             var filePath = Path.Combine(imagesPath, fileName);
             var webImageUrl = $"/images/locations/{fileName}";
 
-            // Pobierz obrazek tylko jeśli nie istnieje
             if (!File.Exists(filePath))
             {
                 try
                 {
-                    Console.WriteLine($"Downloading image: {fileName}...");
+                    Console.WriteLine($"Downloading image: {fileName}");
                     var imageBytes = await httpClient.GetByteArrayAsync(imageUrl);
                     await File.WriteAllBytesAsync(filePath, imageBytes);
                     Console.WriteLine($"Successfully downloaded: {fileName}");
@@ -61,29 +104,32 @@ public static class DbSeeder
                     webImageUrl = "/images/locations/placeholder.jpg";
                 }
             }
-            else
+
+            var locationExists = await db.Locations.AnyAsync(l => l.Latitude == lat && l.Longitude == lon && l.ShortDescription == desc);
+            if (!locationExists)
             {
-                Console.WriteLine($"Image already exists: {fileName}");
+                locations.Add(new Location
+                {
+                    Latitude = lat,
+                    Longitude = lon,
+                    ShortDescription = desc,
+                    ImageUrl = webImageUrl
+                });
             }
-
-            var location = new Location
-            {
-                Latitude = lat,
-                Longitude = lon,
-                ShortDescription = desc,
-                ImageUrl = webImageUrl
-            };
-
-            locations.Add(location);
         }
 
-        db.Locations.AddRange(locations);
-        await db.SaveChangesAsync();
-        Console.WriteLine($"Added {locations.Count} locations to database.");
-            var savedLocations = await db.Locations.OrderBy(l => l.Id).ToListAsync();
+        if (locations.Any())
+        {
+            await db.Locations.AddRangeAsync(locations);
+            await db.SaveChangesAsync();
+            Console.WriteLine($"Added {locations.Count} locations to database.");
+        }
+    }
 
-            var riddleDescriptions = new List<(string Desc, RiddleDifficulty Diff, int Time, int Dist)>
-            {
+    private static async Task SeedRiddlesAsync(List<Location> savedLocations, AppDbContext db)
+    {
+        var riddleDescriptions = new List<(string Desc, RiddleDifficulty Diff, int Time, int Dist)>
+        {
                 ("Jesteś w samym sercu Legnicy. Spójrz na kolorowe kamienice.", RiddleDifficulty.Easy, 120, 300),
                 ("Historyczna siedziba Piastów. Gdzie jesteś?", RiddleDifficulty.Medium, 90, 200),
                 ("Dużo zieleni, alejki i cisza. To miejsce zna każdy legniczanin.", RiddleDifficulty.Hard, 60, 150),
@@ -106,35 +152,38 @@ public static class DbSeeder
                 ("Obiekt na świeżym powietrzu, tu odbywają się koncerty latem.", RiddleDifficulty.Hard, 90, 170)
             };
 
-            var riddles = new List<Riddle>();
-            for (int i = 0; i < riddleDescriptions.Count && i < savedLocations.Count; i++)
+        var riddles = new List<Riddle>();
+        for (int i = 0; i < riddleDescriptions.Count && i < savedLocations.Count; i++)
+        {
+            var (desc, diff, time, dist) = riddleDescriptions[i];
+            var location = savedLocations[i];
+
+            var riddleExists = await db.Riddles.AnyAsync(r => r.Description == desc && r.LocationId == location.Id);
+            if (!riddleExists)
             {
-                var (desc, diff, time, dist) = riddleDescriptions[i];
                 riddles.Add(new Riddle
                 {
                     Description = desc,
                     Difficulty = diff,
                     TimeLimitSeconds = time,
                     MaxDistanceMeters = dist,
-                    LocationId = savedLocations[i].Id
+                    LocationId = location.Id
                 });
             }
+        }
 
-            db.Riddles.AddRange(riddles);
+        if (riddles.Any())
+        {
+            await db.Riddles.AddRangeAsync(riddles);
             await db.SaveChangesAsync();
             Console.WriteLine($"Added {riddles.Count} riddles to database.");
-        
-
-        // Sprawdź czy użytkownicy testowi już istnieją
-        var existingUserCount = await userManager.Users.CountAsync();
-        if (existingUserCount > 2) // Więcej niż admin i test user z SeedData
-        {
-            Console.WriteLine("Test users already exist, skipping user seed.");
         }
-        else
+    }
+
+    private static async Task SeedUsersAsync(AppDbContext db, UserManager<AppUser> userManager)
+    {
+        var testUsers = new List<(string Email, string DisplayName, string Password)>
         {
-            var testUsers = new List<(string Email, string DisplayName, string Password)>
-            {
                 ("anna.kowalska@example.com", "Anna Kowalska", "User123!"),
                 ("jan.nowak@example.com", "Jan Nowak", "User123!"),
                 ("maria.wisniewski@example.com", "Maria Wiśniewski", "User123!"),
@@ -155,42 +204,41 @@ public static class DbSeeder
                 ("daniel.grabowski@example.com", "Daniel Grabowski", "User123!"),
                 ("marta.nowakowska@example.com", "Marta Nowakowska", "User123!"),
                 ("robert.michalski@example.com", "Robert Michalski", "User123!")
+        };
+
+        var existingEmails = await db.Users
+            .Where(u => testUsers.Select(tu => tu.Email).Contains(u.Email))
+            .Select(u => u.Email)
+            .ToListAsync();
+
+        var newTestUsers = testUsers
+            .Where(t => !existingEmails.Contains(t.Email))
+            .ToList();
+
+        int createdCount = 0;
+        foreach (var (email, displayName, password) in newTestUsers)
+        {
+            var user = new AppUser
+            {
+                UserName = email,
+                Email = email,
+                DisplayName = displayName,
+                EmailConfirmed = true,
+                CreatedAt = DateTime.UtcNow.AddDays(-Random.Shared.Next(1, 365))
             };
 
-            int createdCount = 0;
-            foreach (var (email, displayName, password) in testUsers)
+            var result = await userManager.CreateAsync(user, password);
+            if (result.Succeeded)
             {
-                var existingUser = await userManager.FindByEmailAsync(email);
-                if (existingUser == null)
-                {
-                    var user = new AppUser
-                    {
-                        UserName = email,
-                        Email = email,
-                        DisplayName = displayName,
-                        EmailConfirmed = true,
-                        CreatedAt = DateTime.UtcNow.AddDays(-Random.Shared.Next(1, 365))
-                    };
-
-                    var result = await userManager.CreateAsync(user, password);
-                    if (result.Succeeded)
-                    {
-                        await userManager.AddToRoleAsync(user, "User");
-                        createdCount++;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Failed to create user {email}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"User already exists: {email}");
-                }
+                await userManager.AddToRoleAsync(user, "User");
+                createdCount++;
             }
-            Console.WriteLine($"Created {createdCount} new test users.");
+            else
+            {
+                Console.WriteLine($"Failed to create user {email}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            }
         }
 
-        Console.WriteLine("Database seeding completed.");
+        Console.WriteLine($"Created {createdCount} new test users.");
     }
 }

@@ -11,13 +11,6 @@ public static class DbSeeder
         var imagesPath = Path.Combine(env.WebRootPath, "images", "locations");
         Directory.CreateDirectory(imagesPath);
 
-        // Sprawdź czy dane już istnieją
-        if (await db.Locations.AnyAsync())
-        {
-            Console.WriteLine("Locations already exist, skipping seed.");
-            return;
-        }
-
         var locationData = new List<(decimal Lat, decimal Lon, string Desc, string Url, string File)>
         {
             (51.2070m, 16.1550m, "Rynek w Legnicy", "https://images.unsplash.com/photo-1590503831101-55cdf1464dc6", "rynek.jpg"),
@@ -87,14 +80,6 @@ public static class DbSeeder
         db.Locations.AddRange(locations);
         await db.SaveChangesAsync();
         Console.WriteLine($"Added {locations.Count} locations to database.");
-
-        // Sprawdź czy zagadki już istnieją
-        if (await db.Riddles.AnyAsync())
-        {
-            Console.WriteLine("Riddles already exist, skipping riddle seed.");
-        }
-        else
-        {
             var savedLocations = await db.Locations.OrderBy(l => l.Id).ToListAsync();
 
             var riddleDescriptions = new List<(string Desc, RiddleDifficulty Diff, int Time, int Dist)>
@@ -138,7 +123,7 @@ public static class DbSeeder
             db.Riddles.AddRange(riddles);
             await db.SaveChangesAsync();
             Console.WriteLine($"Added {riddles.Count} riddles to database.");
-        }
+        
 
         // Sprawdź czy użytkownicy testowi już istnieją
         var existingUserCount = await userManager.Users.CountAsync();
